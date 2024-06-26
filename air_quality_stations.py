@@ -79,7 +79,8 @@ def _fetch_installations_for_station(station_id: int) -> List[Dict[str, Any]]:
             print("Too many requests for installations!")
 
         else:
-            print(f"Failed to retrieve installations data fo station: #{station_id}. Status code: {response.status_code}")
+            print(f"Failed to retrieve installations data fo station: #{station_id}."
+                  f"Status code: {response.status_code}")
 
     except requests.exceptions.RequestException as e:
         print(f"Error requesting data: {e}")
