@@ -1,102 +1,128 @@
 import sys
 import requests
 import json
-from typing import List, Dict, Any
+from typing import Optional, List
+from dataclasses import dataclass, field
+
+STATIONS_URL = "https://api.gios.gov.pl/pjp-api/rest/station/findAll"
+INSTALLATIONS_URL = "https://api.gios.gov.pl/pjp-api/rest/station/sensors/"
 
 
-def request_all_stations(url: str) -> List[Dict[str, str]]:
+@dataclass
+class Installation:
     """
-    Sends GET request to retrieve all stations.
+    A class to represent an installation.
 
-    :param url: URL to fetch stations data from
-
-    :return: Sorted list of dictionaries with keys 'id' and 'name' for each station.
+    Attributes:
+        id (int): ID of the installation.
+        param_code (str): Parameter code of the installation.
     """
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = json.loads(response.text)
-            stations_list = [{"id": station["id"], "name": station["stationName"]} for station in data]
-            stations_list = sorted(stations_list, key=lambda x: x["id"])
-            return stations_list
+    id: int
+    param_code: str
 
-        elif response.status_code == 429:
-            print("Too many requests for all stations!")
-
-        else:
-            print(f"Failed to retrieve stations data. Status code: {response.status_code}")
-
-    except requests.exceptions.RequestException as e:
-        print(f"Error requesting data: {e}")
-    except json.JSONDecodeError as e:
-        print(f"Error decoding JSON: {e}")
-    sys.exit(1)
+    def __str__(self):
+        return f"Installation: #{self.id}: '{self.param_code}'"
 
 
-def request_all_installations(stations_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+@dataclass
+class Station:
     """
-    Fetches installation data for each station in the provided list.
+    A class to represent a Station.
 
-    :param stations_list: A list of dictionaries, each containing 'id' and 'name' of a station.
-
-    :return:  A list of dictionaries, each containing 'id', 'name', and 'installations' of each station.
+    Attributes:
+        id (int): ID of the Station.
+        name (str): Name of the Station
+        installations (List[Installation]): A list of all installations.
     """
-    stations_with_installations = []
+    id: int
+    name: str
+    installations: Optional[List] = field(default_factory=list)
 
-    for station in stations_list:
-        station_id = station["id"]
-        station_name = station["name"]
-        installations = _fetch_installations_for_station(station_id)
-
-        stations_with_installations.append({
-            "id": station_id,
-            "name": station_name,
-            "installations": installations
-        })
-
-    return stations_with_installations
+    def __str__(self):
+        installations_str = '\n'.join(str(installation) for installation in self.installations)
+        return f"Station #{self.id} ({self.name}):\n{installations_str}"
 
 
-def _fetch_installations_for_station(station_id: int) -> List[Dict[str, Any]]:
+class ApiHandler:
     """
-    Sends a GET request to retrieve installation data for a given station ID.
-
-    :param station_id: The ID of the station to fetch installation data for.
-
-    :return: A list of dictionaries, each containing 'id' and 'paramCode' of an installation.
+    A class to handle API calls.
+    Attributes:
+        stations_url (str): URL to get all the stations
+        installations_url (str): URL to get all the installations for specific station
     """
-    try:
-        response = requests.get(f"https://api.gios.gov.pl/pjp-api/rest/station/sensors/{station_id}")
-        if response.status_code == 200:
-            data = json.loads(response.text)
-            installations_list = [
-                {"id": installation["id"], "paramCode": installation["param"]["paramCode"]}
-                for installation in data
-            ]
-            return installations_list
+    def __init__(self, stations_url: str = STATIONS_URL, installations_url: str = INSTALLATIONS_URL):
+        self.stations_url = stations_url
+        self.installations_url = installations_url
 
-        elif response.status_code == 429:
-            print("Too many requests for installations!")
+    def get_all_stations(self) -> List[Station]:
+        """
+        Fetches all stations from the API.
+        :return: A List of all stations.
+        """
+        try:
+            response = requests.get(self.stations_url)
+            if response.status_code == 200:
+                data = json.loads(response.text)
+                stations_list = [Station(station["id"], station["stationName"]) for station in data]
+                return stations_list
 
-        else:
-            print(f"Failed to retrieve installations data fo station: #{station_id}."
-                  f"Status code: {response.status_code}")
+            elif response.status_code == 429:
+                print("Too many requests for all stations!")
 
-    except requests.exceptions.RequestException as e:
-        print(f"Error requesting data: {e}")
-    except json.JSONDecodeError as e:
-        print(f"Error decoding JSON: {e}")
+            else:
+                print(f"Failed to retrieve stations data. Status code: {response.status_code}")
+
+        except KeyError as e:
+            print(f"Problem with finding key in JSON: {e}")
+        except requests.exceptions.RequestException as e:
+            print(f"Error requesting data: {e}")
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON: {e}")
+        sys.exit(1)
+
+    def sort_stations(self, stations: List[Station]) -> List[Station]:
+        """
+        Sorts list of stations by their ID.
+        :param stations: List of all stations.
+        :return: Sorted list of all stations.
+        """
+        return sorted(stations, key=lambda station: station.id)
+
+    def get_installations_of_station(self, station_id: int) -> List[Installation]:
+        """
+        Fetches all installations for a specific station.
+        :param station_id: Station ID.
+        :return: List of all installations for specific station.
+        """
+        try:
+            response = requests.get(f"{self.installations_url}{station_id}")
+            if response.status_code == 200:
+                data = json.loads(response.text)
+                return [Installation(installation["id"], installation["param"]["paramCode"]) for installation in data]
+
+            elif response.status_code == 429:
+                print("Too many requests for installations!")
+
+            else:
+                print(f"Failed to retrieve installations data fo station: #{station_id}."
+                      f"Status code: {response.status_code}")
+
+        except KeyError as e:
+            print(f"Problem with finding key in JSON: {e}")
+        except requests.exceptions.RequestException as e:
+            print(f"Error requesting data: {e}")
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON: {e}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("Fetching data from API, please wait")
-    url_request = "https://api.gios.gov.pl/pjp-api/rest/station/findAll"
+    handler = ApiHandler()
+    stations = handler.get_all_stations()
+    stations = handler.sort_stations(stations)
 
-    all_stations = request_all_stations(url_request)
-    stations_with_installations = request_all_installations(all_stations)
+    for station in stations:
+        station.installations = handler.get_installations_of_station(station.id)
 
-    for station in stations_with_installations:
-        print(f"Station #{station['id']} ({station['name']}):")
-        for installation in station["installations"]:
-            print(f"Installation #{installation['id']}: '{installation['paramCode']}'")
-        print()
+    for station in stations:
+        print(station, end="\n\n")
