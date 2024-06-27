@@ -19,10 +19,10 @@ This Python script retrieves all air quality monitoring stations and their insta
 
 2. **Running the Script**
 
-   - Clone the repository or download the `air_quality_stations.py` file.
+   - Clone the repository or download `main.py`, `models.py`, `api_handler.py` file.
    - Navigate to the directory containing the script.
    - Run the script using Python:
      ```
-     python air_quality_stations.py
+     python3 main.py
      ```
    - The script will fetch data from the GIOŚ API and display station details along with their installations.
