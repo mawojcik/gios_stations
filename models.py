@@ -33,8 +33,7 @@ class Station:
     installations: Optional[List] = field(default_factory=list)
 
     def __str__(self):
-        if self.installations == []:
-            installations_str = "No installations found"
-        else:
-            installations_str = '\n'.join(str(installation) for installation in self.installations)
+        if not self.installations:
+            return f"Station #{self.id} ({self.name}):\nNo installations found"
+        installations_str = '\n'.join(str(installation) for installation in self.installations)
         return f"Station #{self.id} ({self.name}):\n{installations_str}"
