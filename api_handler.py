@@ -1,47 +1,9 @@
 import sys
 import requests
-from typing import Optional, List
-from dataclasses import dataclass, field
+from models import Station, Installation
+from typing import List
 
 BASEURL = "https://api.gios.gov.pl/pjp-api/rest/station/"
-
-
-@dataclass
-class Installation:
-    """
-    A class to represent an installation.
-
-    Attributes:
-        id (int): ID of the installation.
-        param_code (str): Parameter code of the installation.
-    """
-    id: int
-    param_code: str
-
-    def __str__(self):
-        return f"Installation: #{self.id}: '{self.param_code}'"
-
-
-@dataclass
-class Station:
-    """
-    A class to represent a Station.
-
-    Attributes:
-        id (int): ID of the Station.
-        name (str): Name of the Station
-        installations (List[Installation]): A list of all installations.
-    """
-    id: int
-    name: str
-    installations: Optional[List] = field(default_factory=list)
-
-    def __str__(self):
-        if self.installations == []:
-            installations_str = "No installations found"
-        else:
-            installations_str = '\n'.join(str(installation) for installation in self.installations)
-        return f"Station #{self.id} ({self.name}):\n{installations_str}"
 
 
 class ApiHandler:
@@ -111,16 +73,3 @@ class ApiHandler:
             print(f"Error requesting data: {e}")
         except requests.exceptions.JSONDecodeError as e:
             print(f"Error decoding JSON: {e}")
-
-
-if __name__ == "__main__":
-    print("Fetching data from API, please wait")
-    handler = ApiHandler()
-    stations = handler.get_all_stations()
-    stations = sorted(stations, key=lambda station: station.id)
-
-    for station in stations:
-        station.installations = handler.get_installations_of_station(station.id)
-
-    for station in stations:
-        print(station, end="\n\n")
