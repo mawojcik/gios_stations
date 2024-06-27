@@ -4,8 +4,7 @@ import json
 from typing import Optional, List
 from dataclasses import dataclass, field
 
-STATIONS_URL = "https://api.gios.gov.pl/pjp-api/rest/station/findAll"
-INSTALLATIONS_URL = "https://api.gios.gov.pl/pjp-api/rest/station/sensors/"
+BASEURL = "https://api.gios.gov.pl/pjp-api/rest/station/"
 
 
 @dataclass
@@ -47,12 +46,10 @@ class ApiHandler:
     """
     A class to handle API calls.
     Attributes:
-        stations_url (str): URL to get all the stations
-        installations_url (str): URL to get all the installations for specific station
+        base_url (str): prefix of URL to get all the stations/installations
     """
-    def __init__(self, stations_url: str = STATIONS_URL, installations_url: str = INSTALLATIONS_URL):
-        self.stations_url = stations_url
-        self.installations_url = installations_url
+    def __init__(self, base_url: str = BASEURL):
+        self.base_url = base_url
 
     def get_all_stations(self) -> List[Station]:
         """
@@ -60,7 +57,7 @@ class ApiHandler:
         :return: A List of all stations.
         """
         try:
-            response = requests.get(self.stations_url)
+            response = requests.get(self.base_url + "findAll")
             if response.status_code == 200:
                 data = json.loads(response.text)
                 stations_list = [Station(station["id"], station["stationName"]) for station in data]
@@ -80,14 +77,6 @@ class ApiHandler:
             print(f"Error decoding JSON: {e}")
         sys.exit(1)
 
-    def sort_stations(self, stations: List[Station]) -> List[Station]:
-        """
-        Sorts list of stations by their ID.
-        :param stations: List of all stations.
-        :return: Sorted list of all stations.
-        """
-        return sorted(stations, key=lambda station: station.id)
-
     def get_installations_of_station(self, station_id: int) -> List[Installation]:
         """
         Fetches all installations for a specific station.
@@ -95,7 +84,7 @@ class ApiHandler:
         :return: List of all installations for specific station.
         """
         try:
-            response = requests.get(f"{self.installations_url}{station_id}")
+            response = requests.get(f"{self.base_url}sensors/{station_id}")
             if response.status_code == 200:
                 data = json.loads(response.text)
                 return [Installation(installation["id"], installation["param"]["paramCode"]) for installation in data]
@@ -119,7 +108,7 @@ if __name__ == "__main__":
     print("Fetching data from API, please wait")
     handler = ApiHandler()
     stations = handler.get_all_stations()
-    stations = handler.sort_stations(stations)
+    stations = sorted(stations, key=lambda station: station.id)
 
     for station in stations:
         station.installations = handler.get_installations_of_station(station.id)
