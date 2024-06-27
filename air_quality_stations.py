@@ -59,8 +59,10 @@ class ApiHandler:
         try:
             response = requests.get(self.base_url + "findAll")
             if response.status_code == 200:
-                data = json.loads(response.text)
-                stations_list = [Station(station["id"], station["stationName"]) for station in data]
+                data = response.json()
+                stations_list = [
+                    Station(station.get("id"), station.get("stationName")) for station in data
+                ]
                 return stations_list
 
             elif response.status_code == 429:
@@ -86,14 +88,20 @@ class ApiHandler:
         try:
             response = requests.get(f"{self.base_url}sensors/{station_id}")
             if response.status_code == 200:
-                data = json.loads(response.text)
-                return [Installation(installation["id"], installation["param"]["paramCode"]) for installation in data]
+                data = response.json()
+                installations_list = [
+                    Installation(
+                        installation.get("id"),
+                        installation.get("param", {}).get("paramCode")
+                    ) for installation in data
+                ]
+                return installations_list
 
             elif response.status_code == 429:
                 print("Too many requests for installations!")
 
             else:
-                print(f"Failed to retrieve installations data fo station: #{station_id}."
+                print(f"Failed to retrieve installations data for station: #{station_id}. "
                       f"Status code: {response.status_code}")
 
         except KeyError as e:
