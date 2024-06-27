@@ -1,6 +1,5 @@
 import sys
 import requests
-import json
 from typing import Optional, List
 from dataclasses import dataclass, field
 
@@ -38,7 +37,10 @@ class Station:
     installations: Optional[List] = field(default_factory=list)
 
     def __str__(self):
-        installations_str = '\n'.join(str(installation) for installation in self.installations)
+        if self.installations == []:
+            installations_str = "No installations found"
+        else:
+            installations_str = '\n'.join(str(installation) for installation in self.installations)
         return f"Station #{self.id} ({self.name}):\n{installations_str}"
 
 
@@ -61,7 +63,9 @@ class ApiHandler:
             if response.status_code == 200:
                 data = response.json()
                 stations_list = [
-                    Station(station.get("id"), station.get("stationName")) for station in data
+                    Station(station.get("id"), station.get("stationName"))
+                    for station in data
+                    if "id" in station and "stationName" in station
                 ]
                 return stations_list
 
@@ -71,11 +75,9 @@ class ApiHandler:
             else:
                 print(f"Failed to retrieve stations data. Status code: {response.status_code}")
 
-        except KeyError as e:
-            print(f"Problem with finding key in JSON: {e}")
         except requests.exceptions.RequestException as e:
             print(f"Error requesting data: {e}")
-        except json.JSONDecodeError as e:
+        except requests.exceptions.JSONDecodeError as e:
             print(f"Error decoding JSON: {e}")
         sys.exit(1)
 
@@ -94,6 +96,7 @@ class ApiHandler:
                         installation.get("id"),
                         installation.get("param", {}).get("paramCode")
                     ) for installation in data
+                    if "id" in installation and "param" in installation and "paramCode" in installation.get("param", {})
                 ]
                 return installations_list
 
@@ -104,11 +107,9 @@ class ApiHandler:
                 print(f"Failed to retrieve installations data for station: #{station_id}. "
                       f"Status code: {response.status_code}")
 
-        except KeyError as e:
-            print(f"Problem with finding key in JSON: {e}")
         except requests.exceptions.RequestException as e:
             print(f"Error requesting data: {e}")
-        except json.JSONDecodeError as e:
+        except requests.exceptions.JSONDecodeError as e:
             print(f"Error decoding JSON: {e}")
 
 
